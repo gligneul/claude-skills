@@ -3,7 +3,7 @@ name: worktree
 description: Create a git worktree and branch for a Linear issue. Use when the user runs /worktree with a Linear issue id (e.g. NIT-1234) and optionally a base branch.
 argument-hint: <linear-issue> [base-branch]
 disable-model-invocation: true
-allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git rebase:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git reset:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
 ---
 
 # New worktree for a Linear issue
@@ -47,16 +47,16 @@ Invoking this skill is explicit authorization to run the git commands listed bel
 
 5. **Move into the worktree.** Run `cd <root-parent>/<repo-name>-<tag>` as its own command so later commands run there.
 
-6. **Rebase onto the base branch.**
+6. **Reset to the base branch.** The new branch starts at the current HEAD, which may be unrelated to `<base>`, so move it instead of rebasing:
 
    ```bash
-   git fetch origin <base> && git rebase origin/<base>
+   git fetch origin <base> && git reset --hard origin/<base>
    ```
 
-   If `origin` has no such branch, rebase onto the local `<base>` instead. If the rebase hits conflicts, run `git rebase --abort`, then report the conflict to the user and stop.
+   If `origin` has no such branch, reset to the local `<base>` instead. The worktree is brand new, so the reset cannot discard any work.
 
 7. **Nitro only.** If `<repo-name>` is `nitro`, run `make init-submodules` in the worktree.
 
 ## Report
 
-End with the worktree path, the branch name, and the base branch it was rebased onto. Mention that the shell working directory is now the worktree.
+End with the worktree path, the branch name, and the base branch it was reset to. Mention that the shell working directory is now the worktree.
