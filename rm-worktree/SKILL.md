@@ -1,6 +1,6 @@
 ---
-name: worktree-cleanup
-description: Remove the current git worktree and its branch after confirmation. Use when the user runs /worktree-cleanup from inside a worktree created with /worktree.
+name: rm-worktree
+description: Remove the current git worktree and its branch after confirmation. Use when the user runs /rm-worktree from inside a worktree created with /worktree.
 disable-model-invocation: true
 allowed-tools: Bash(git rev-parse:*) Bash(git worktree:*) Bash(git branch:*) Bash(git status:*) Bash(git symbolic-ref:*) Bash(git rev-list:*) Bash(git log:*)
 ---

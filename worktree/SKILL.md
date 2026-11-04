@@ -3,12 +3,12 @@ name: worktree
 description: Create a git worktree and branch for a Linear issue. Use when the user runs /worktree with a Linear issue id (e.g. NIT-1234) and optionally a base branch.
 argument-hint: <linear-issue> [base-branch]
 disable-model-invocation: true
-allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git reset:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git reset:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(grep:*) Bash(echo:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
 ---
 
 # New worktree for a Linear issue
 
-Create a worktree and branch for `$0`, based on `$1` when given.
+Create a worktree and branch for `$0`, based on `$1` when given. The worktree lives in `.worktrees/` inside the main checkout.
 
 Invoking this skill is explicit authorization to run the git commands listed below, even though the global instructions normally forbid git commands that change state. Run only the commands listed here. Do not commit, push, or touch any other branch.
 
@@ -33,21 +33,30 @@ Invoking this skill is explicit authorization to run the git commands listed bel
    git show-ref --verify --quiet refs/heads/master && echo master
    ```
 
-   `root` is the main checkout even when run from inside another worktree. `<repo-name>` is `repo`.
+   `<root>` is the main checkout even when run from inside another worktree. `<repo-name>` is `repo`.
 
    Base branch: `$1` if given. Otherwise use the branch named by `origin/HEAD` (strip the `origin/` prefix). If that is unset, use `main` if it exists, else `master`. If neither exists, ask the user.
 
-4. **Create the worktree.** Run from `root`:
+4. **Exclude `.worktrees` from git.** The worktree sits inside the main checkout, so git must ignore the directory. Run:
 
    ```bash
-   cd "$root" && git worktree add ../<repo-name>-<tag> -b gligneul/<ticket>-<tag>
+   exclude="$(git rev-parse --path-format=absolute --git-common-dir)/info/exclude"
+   grep -qxE '/?\.worktrees/?' "$exclude" 2>/dev/null || echo '.worktrees' >> "$exclude"
+   ```
+
+   The `grep` matches a line that already excludes `.worktrees`, with or without slashes. Do not edit `.gitignore`.
+
+5. **Create the worktree.** Run from `<root>`:
+
+   ```bash
+   cd "<root>" && git worktree add .worktrees/<tag> -b gligneul/<ticket>-<tag>
    ```
 
    If the target directory or branch already exists, stop and report it. Do not delete or overwrite anything.
 
-5. **Move into the worktree.** Run `cd <root-parent>/<repo-name>-<tag>` as its own command so later commands run there.
+6. **Move into the worktree.** Run `cd <root>/.worktrees/<tag>` as its own command so later commands run there.
 
-6. **Reset to the base branch.** The new branch starts at the current HEAD, which may be unrelated to `<base>`, so move it instead of rebasing:
+7. **Reset to the base branch.** The new branch starts at the current HEAD, which may be unrelated to `<base>`, so move it instead of rebasing:
 
    ```bash
    git fetch origin <base> && git reset --hard origin/<base>
@@ -55,7 +64,7 @@ Invoking this skill is explicit authorization to run the git commands listed bel
 
    If `origin` has no such branch, reset to the local `<base>` instead. The worktree is brand new, so the reset cannot discard any work.
 
-7. **Nitro only.** If `<repo-name>` is `nitro`, run `make init-submodules` in the worktree.
+8. **Nitro only.** If `<repo-name>` is `nitro`, run `make init-submodules` in the worktree.
 
 ## Report
 
