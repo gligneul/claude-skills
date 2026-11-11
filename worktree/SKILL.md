@@ -3,7 +3,7 @@ name: worktree
 description: Create a git worktree and branch for a Linear issue. Use when the user runs /worktree with a Linear issue id (e.g. NIT-1234) and optionally a base branch.
 argument-hint: <linear-issue> [base-branch]
 disable-model-invocation: true
-allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git reset:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(grep:*) Bash(echo:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(grep:*) Bash(echo:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
 ---
 
 # New worktree for a Linear issue
@@ -29,13 +29,13 @@ Invoking this skill is explicit authorization to run the git commands listed bel
    root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
    repo="$(basename "$root")"
    git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null
-   git show-ref --verify --quiet refs/heads/main && echo main
-   git show-ref --verify --quiet refs/heads/master && echo master
+   git show-ref --verify --quiet refs/remotes/origin/main && echo main
+   git show-ref --verify --quiet refs/remotes/origin/master && echo master
    ```
 
    `<root>` is the main checkout even when run from inside another worktree. `<repo-name>` is `repo`.
 
-   Base branch: `$1` if given. Otherwise use the branch named by `origin/HEAD` (strip the `origin/` prefix). If that is unset, use `main` if it exists, else `master`. If neither exists, ask the user.
+   Base branch: `$1` if given. Otherwise use the branch named by `origin/HEAD` (strip the `origin/` prefix). If that is unset, use `main` if `origin/main` exists, else `master`. If neither exists, ask the user.
 
 4. **Exclude `.worktrees` from git.** The worktree sits inside the main checkout, so git must ignore the directory. Run:
 
@@ -46,26 +46,26 @@ Invoking this skill is explicit authorization to run the git commands listed bel
 
    The `grep` matches a line that already excludes `.worktrees`, with or without slashes. Do not edit `.gitignore`.
 
-5. **Create the worktree.** Run from `<root>`:
+5. **Fetch the base branch.** Run on its own, not chained with other commands:
 
    ```bash
-   cd "<root>" && git worktree add .worktrees/<tag> -b gligneul/<ticket>-<tag>
+   git fetch origin <base>
    ```
 
-   If the target directory or branch already exists, stop and report it. Do not delete or overwrite anything.
+   If the fetch fails or is denied, say so and continue with the existing `origin/<base>` pointer, which may be stale. Do not retry the fetch and do not fall back to a local branch.
 
-6. **Move into the worktree.** Run `cd <root>/.worktrees/<tag>` as its own command so later commands run there.
-
-7. **Reset to the base branch.** The new branch starts at the current HEAD, which may be unrelated to `<base>`, so move it instead of rebasing:
+6. **Create the worktree.** Run from `<root>`:
 
    ```bash
-   git fetch origin <base> && git reset --hard origin/<base>
+   cd "<root>" && git worktree add --no-track -b gligneul/<ticket>-<tag> .worktrees/<tag> origin/<base>
    ```
 
-   If `origin` has no such branch, reset to the local `<base>` instead. The worktree is brand new, so the reset cannot discard any work.
+   The new branch starts at `origin/<base>`, so no reset is needed afterwards. If the target directory or branch already exists, stop and report it. Do not delete or overwrite anything.
+
+7. **Move into the worktree.** Run `cd <root>/.worktrees/<tag>` as its own command so later commands run there.
 
 8. **Nitro only.** If `<repo-name>` is `nitro`, run `make init-submodules` in the worktree.
 
 ## Report
 
-End with the worktree path, the branch name, and the base branch it was reset to. Mention that the shell working directory is now the worktree.
+End with the worktree path, the branch name, and the base branch it was created from. If the fetch failed, say the base may be stale. Mention that the shell working directory is now the worktree.
