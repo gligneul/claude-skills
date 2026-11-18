@@ -3,7 +3,7 @@ name: worktree
 description: Create a git worktree and branch for a Linear issue. Use when the user runs /worktree with a Linear issue id (e.g. NIT-1234) and optionally a base branch.
 argument-hint: <linear-issue> [base-branch]
 disable-model-invocation: true
-allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(grep:*) Bash(echo:*) Bash(make init-submodules) mcp__claude_ai_Linear__get_issue
+allowed-tools: Bash(git fetch:*) Bash(git worktree:*) Bash(git rev-parse:*) Bash(git symbolic-ref:*) Bash(git show-ref:*) Bash(git branch:*) Bash(git status:*) Bash(grep:*) Bash(echo:*) Bash(make init-submodules) Bash(make build-node-deps) mcp__claude_ai_Linear__get_issue
 ---
 
 # New worktree for a Linear issue
@@ -64,8 +64,19 @@ Invoking this skill is explicit authorization to run the git commands listed bel
 
 7. **Move into the worktree.** Run `cd <root>/.worktrees/<tag>` as its own command so later commands run there.
 
-8. **Nitro only.** If `<repo-name>` is `nitro`, run `make init-submodules` in the worktree.
+8. **Nitro only.** If `<repo-name>` is `nitro`, start the dependency setup in the worktree with the Bash tool's `run_in_background: true`:
+
+   ```bash
+   make init-submodules && make build-node-deps
+   ```
+
+   It takes a long time, so do not wait for it. Finish the skill and keep working with the user (planning, reading code, editing Go files) while it runs. Until the task-completion notification arrives:
+
+   - Do not build or test Go code, and do not run other `make` targets. They need the submodules and node deps this task produces.
+   - Do not edit files inside submodule directories.
+
+   When the notification arrives, tell the user whether setup succeeded. If it failed, show the end of its output and stop before any build or test. If the work reaches a point that needs a build or test before the notification, tell the user setup is still running and wait for it.
 
 ## Report
 
-End with the worktree path, the branch name, and the base branch it was created from. If the fetch failed, say the base may be stale. Mention that the shell working directory is now the worktree.
+End with the worktree path, the branch name, and the base branch it was created from. If the fetch failed, say the base may be stale. Mention that the shell working directory is now the worktree. For nitro, say that dependency setup is running in the background and builds and tests wait for it.
