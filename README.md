@@ -16,6 +16,8 @@ claude-skills/
 ./install.sh
 ```
 
-This symlinks every skill directory into `~/.claude/skills/` so Claude Code
-can discover them. Re-run it after adding a new skill. It never overwrites an
-existing entry; set `CLAUDE_SKILLS_DIR` to install somewhere else.
+This symlinks `CLAUDE.md` to `~/.claude/CLAUDE.md` and every skill directory
+into `~/.claude/skills/` so Claude Code can discover them. Re-run it after
+adding a new skill. It never overwrites an existing entry. Set `CLAUDE_DIR` to
+use a different Claude config directory, or `CLAUDE_SKILLS_DIR` to install
+skills somewhere else.

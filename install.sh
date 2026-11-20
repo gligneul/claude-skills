@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
-# Symlinks every skill directory in this repo (a directory containing SKILL.md)
-# into Claude's skills directory so Claude Code can discover them.
+# Symlinks CLAUDE.md into Claude's config directory and every skill directory
+# in this repo (a directory containing SKILL.md) into Claude's skills directory
+# so Claude Code can discover them.
 
 set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-skills_dir="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
+claude_dir="${CLAUDE_DIR:-$HOME/.claude}"
+skills_dir="${CLAUDE_SKILLS_DIR:-$claude_dir/skills}"
 
-mkdir -p "$skills_dir"
-
-found=0
-for skill_file in "$repo_dir"/*/SKILL.md; do
-    [ -e "$skill_file" ] || continue
-    found=1
-
-    src="$(dirname "$skill_file")"
-    name="$(basename "$src")"
-    dst="$skills_dir/$name"
+link() {
+    local src="$1" dst="$2" name="$3"
 
     if [ -L "$dst" ]; then
         if [ "$(readlink "$dst")" = "$src" ]; then
@@ -30,6 +24,20 @@ for skill_file in "$repo_dir"/*/SKILL.md; do
         ln -s "$src" "$dst"
         echo "linked   $name -> $src"
     fi
+}
+
+mkdir -p "$claude_dir" "$skills_dir"
+
+link "$repo_dir/CLAUDE.md" "$claude_dir/CLAUDE.md" CLAUDE.md
+
+found=0
+for skill_file in "$repo_dir"/*/SKILL.md; do
+    [ -e "$skill_file" ] || continue
+    found=1
+
+    src="$(dirname "$skill_file")"
+    name="$(basename "$src")"
+    link "$src" "$skills_dir/$name" "$name"
 done
 
 if [ "$found" -eq 0 ]; then
